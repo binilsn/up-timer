@@ -9,14 +9,14 @@ import "@fontsource/roboto/700.css";
 import { ThemeProvider } from "@mui/material";
 import theme from "./theme.js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, RouterProvider } from "react-router-dom";
+import routes from "./route.js";
 
 const qClient=new QueryClient()
 createRoot(document.getElementById("root")).render(
-	<StrictMode>
 		<ThemeProvider theme={theme}>
 			<QueryClientProvider client={qClient}>
-				<App />
+			<RouterProvider router={routes} />
 			</QueryClientProvider>
 		</ThemeProvider>
-	</StrictMode>
 );
