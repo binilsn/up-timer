@@ -22,7 +22,7 @@ class UptimeMonitor < ApplicationRecord
   scope :active, -> { where(paused: false) }
   scope :paused, -> { where(paused: true) }
   scope :public_listed, -> { where(public_listed: true) }
-  scope :with_location, -> { where.not(latitude: nil, longitude: nil) }
+  scope :with_location, -> { where.not(location: [ nil, {} ]) }
 
   def self.fleet_stats
     total = count
@@ -141,7 +141,17 @@ class UptimeMonitor < ApplicationRecord
   end
 
   def location_set?
-    latitude.present? && longitude.present?
+    location.present? && location["success"]
+  end
+
+  def location_summary
+    return nil unless location_set?
+
+    parts = []
+    parts << location["city"] if location["city"].present?
+    parts << location["country_code"] if location["country_code"].present?
+    isp = location["isp"].presence || location["org"].presence
+    "#{parts.join(', ')}#{" — #{isp}" if isp}"
   end
 
   def last_pause_log
