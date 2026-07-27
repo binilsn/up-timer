@@ -14,6 +14,7 @@ Having a hard time tracking your services? UpTimer gives you real-time monitorin
 - **Incident management** — automatic incident creation on failure, resolution on recovery
 - **Role-based access control** — viewer / collaborator / admin roles
 - **Alert emails** — notified when services go down (optional, via Resend or Mailgun)
+- **Webhooks** — real-time status streaming with JWT HS256 signatures
 - **Data retention** — automatic cleanup of old checks and resolved incidents
 - **Background scheduling** — checks run every 30 seconds via SolidQueue
 - **Dark/light design** — high-contrast light operational system
@@ -229,7 +230,18 @@ Users registering with those emails get the **admin** role. Everyone else defaul
 | ---------------- | -------------------------------------------------------------------------------- |
 | **viewer**       | Dashboard, Nodes (view), Alerts (view), Public status page, Personal settings    |
 | **collaborator** | Everything viewer can + Nodes (CRUD), Alerts (create/resolve), Personal settings |
-| **admin**        | Everything above + Integrations, Email notifications toggle, User promotion      |
+| **admin**        | Everything above + Integrations, Webhooks, Email notifications toggle, User promotion      |
+
+## Webhooks
+
+UpTimer can stream real-time monitor events to your own endpoints. Every delivery is signed with a JWT HS256 token for verification.
+
+- **Event types:** `check_result` (every check) and `status_change` (up ↔ down transitions)
+- **Signature:** `X-UpTimer-Signature` header with JWT claims (`event`, `iat`, `body_sha256`)
+- **Auto-deactivation:** endpoints are disabled after 3 consecutive failures
+- **Per-node assignment:** control which webhooks fire for which monitors
+
+See [docs/webhooks.md](docs/webhooks.md) for payload format, verification examples (Ruby, Python, JS, curl), and troubleshooting.
 
 ## Alert Triggers
 

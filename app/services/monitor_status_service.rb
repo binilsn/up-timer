@@ -79,13 +79,12 @@ class MonitorStatusService
   end
 
   def enqueue_webhook_status_change(previous_status, new_status)
-    payload = {
-      monitor_id: @monitor.id,
-      monitor_name: @monitor.name,
+    payload = WebhookPayloadBuilder.build(
+      event: "status_change",
+      monitor: @monitor,
       previous_status: previous_status,
-      new_status: new_status,
-      timestamp: Time.current
-    }.as_json
+      new_status: new_status
+    )
 
     @monitor.webhook_endpoints.active.each do |endpoint|
       next unless endpoint.webhook_endpoint_monitors
