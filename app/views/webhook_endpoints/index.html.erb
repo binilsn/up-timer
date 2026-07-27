@@ -1,0 +1,48 @@
+<div class="space-y-6">
+  <%# ── Header ── %>
+  <div class="space-y-2">
+    <h1 class="text-2xl md:text-[32px] font-semibold leading-10 tracking-[-0.01em] text-navy font-[Hanken_Grotesk]">Webhook Endpoints</h1>
+    <p class="text-sm text-slate-400 max-w-2xl">Manage global webhook endpoints that receive real-time status updates from your monitors. Tokens are shown once — copy and store them securely.</p>
+  </div>
+
+  <%# ── One-Time Token Flash ── %>
+  <% if flash[:token].present? %>
+    <div class="bg-primary-container/10 border border-primary-container/20 rounded-default p-4 space-y-3">
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5 text-primary-container" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z"/></svg>
+        <p class="text-sm font-semibold text-primary-container font-[Hanken_Grotesk]">Token Generated</p>
+      </div>
+      <p class="text-xs text-slate-500">Copy this token now — <strong>it will not be shown again.</strong> Use it as the shared secret for JWT HS256 signing.</p>
+      <div class="flex items-center gap-2">
+        <code class="flex-1 bg-surface-container-low border border-border rounded-default px-3 py-2 text-xs font-mono text-navy break-all select-all"><%= flash[:token] %></code>
+        <button type="button" data-controller="clipboard" data-clipboard-text-value="<%= flash[:token] %>" data-action="clipboard#copy" class="btn btn-secondary text-xs flex-shrink-0 flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+    </div>
+  <% end %>
+
+  <%# ── Create Form ── %>
+  <div class="card space-y-4">
+    <div>
+      <h2 class="text-base font-semibold text-primary-container font-[Hanken_Grotesk]">Add Endpoint</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Register a new webhook URL. A secure token will be auto-generated.</p>
+    </div>
+
+    <%= form_with model: @new_endpoint, url: webhook_endpoints_path, class: "flex gap-2" do |f| %>
+      <div class="flex-1">
+        <%= f.url_field :url, placeholder: "https://example.com/webhook", class: "input-field w-full" %>
+        <% if @new_endpoint.errors[:url].any? %>
+          <p class="text-xs text-error mt-1"><%= @new_endpoint.errors[:url].to_sentence %></p>
+        <% end %>
+      </div>
+      <%= f.button class: "btn btn-primary text-xs flex-shrink-0" do %>Create &rsaquo;<% end %>
+    <% end %>
+  </div>
+
+  <%# ── Endpoints List ── %>
+  <%= turbo_frame_tag "endpoint_list" do %>
+    <%= render "endpoint_list" %>
+  <% end %>
+</div>

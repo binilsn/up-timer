@@ -52,4 +52,10 @@ Rails.application.routes.draw do
     post "recipients/:id/toggle", to: "alert_integrations#toggle_recipient", as: :toggle_recipient
     post "triggers/:id/toggle_email", to: "alert_integrations#toggle_trigger_email", as: :toggle_trigger_email
   end
+
+  resources :webhook_endpoints, only: [ :index, :create, :destroy ] do
+    member do
+      patch :toggle
+    end
+  end
 end
