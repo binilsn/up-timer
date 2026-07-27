@@ -85,6 +85,52 @@
     </div>
   </div>
 
+  <%# ── Webhook Assignments (edit only) ── %>
+  <% if local_assigns[:webhook_endpoints].present? %>
+    <div class="space-y-4">
+      <div>
+        <h3 class="text-base font-semibold text-primary-container font-[Hanken_Grotesk]">Webhook Assignments</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Select which webhooks receive events from this node.</p>
+      </div>
+
+      <% if webhook_endpoints.any? %>
+        <div class="space-y-2">
+          <% webhook_endpoints.each do |webhook| %>
+            <% join = @node.webhook_endpoint_monitors.find_by(webhook_endpoint_id: webhook.id) %>
+            <% assigned = join.present? %>
+            <% selected_events = join&.event_list || [] %>
+            <div class="flex items-start gap-3 p-3 border border-border rounded-default" data-controller="webhook-event-toggle">
+              <%# ── Assignment Checkbox ── %>
+              <label class="flex items-center gap-2 flex-shrink-0 pt-0.5 cursor-pointer">
+                <%= check_box_tag "uptime_monitor[webhook_endpoint_ids][]", webhook.id, assigned,
+                      id: "webhook_#{webhook.id}",
+                      class: "rounded border-border text-primary-container focus:ring-primary-container",
+                      data: { action: "change->webhook-event-toggle#toggle" } %>
+                <span class="text-sm font-medium text-navy"><%= webhook.url %></span>
+              </label>
+
+              <%# ── Event Toggles ── %>
+              <div class="flex gap-2 ml-auto flex-shrink-0 <%= 'hidden' unless assigned %>" data-webhook-event-toggle-target="events">
+                <% WebhookEndpointMonitor::EVENT_TYPES.each do |event_type| %>
+                  <label class="flex items-center gap-1 text-xs cursor-pointer">
+                    <%= check_box_tag "webhook_events[#{webhook.id}][]", event_type,
+                          selected_events.include?(event_type),
+                          id: "webhook_#{webhook.id}_#{event_type}",
+                          class: "rounded border-border text-primary-container focus:ring-primary-container",
+                          data: { webhook_event_toggle_target: "checkbox" } %>
+                    <span class="text-slate-500"><%= event_type.tr("_", " ").titleize %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="text-xs text-slate-400 py-2">No webhook endpoints configured. <%= link_to "Add one", webhook_endpoints_path, class: "text-primary-container underline" %> first.</p>
+      <% end %>
+    </div>
+  <% end %>
+
   <div class="flex gap-3">
     <%= form.button class: "btn btn-primary flex-1 justify-center" do %>
       <%= submit_label %>

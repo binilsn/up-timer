@@ -97,6 +97,46 @@
     <% end %>
   </div>
 
+  <%# ── Webhook Assignments (admin only) ── %>
+  <% if current_account&.admin? %>
+    <% webhook_joins = @node.webhook_endpoint_monitors.includes(:webhook_endpoint) %>
+    <div class="card space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400 font-mono">Webhook Assignments</p>
+          <p class="text-xs text-slate-400 mt-0.5">Endpoints receiving real-time events from this node.</p>
+        </div>
+        <%= link_to "Manage Webhooks", webhook_endpoints_path, class: "text-xs text-primary-container hover:underline" %>
+      </div>
+      <% if webhook_joins.any? %>
+        <div class="space-y-2">
+          <% webhook_joins.each do |join| %>
+            <div class="flex items-center gap-3 p-3 border border-border rounded-default">
+              <span class="w-2 h-2 rounded-full <%= join.webhook_endpoint.active? ? 'bg-green-500' : 'bg-slate-300' %> flex-shrink-0" title="<%= join.webhook_endpoint.active? ? 'Active' : 'Inactive' %>"></span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-navy truncate"><%= join.webhook_endpoint.url %></p>
+                <p class="text-[10px] text-slate-400 font-mono mt-0.5">Token: <%= join.webhook_endpoint.masked_token %></p>
+              </div>
+              <div class="flex gap-1.5 flex-shrink-0">
+                <% join.event_list.each do |event| %>
+                  <span class="chip chip-default text-[10px]"><%= event.tr("_", " ").titleize %></span>
+                <% end %>
+              </div>
+              <% unless join.webhook_endpoint.active? %>
+                <span class="chip chip-warning text-[10px] flex-shrink-0">Disabled</span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="py-6 text-center">
+          <p class="text-xs text-slate-400">No webhooks assigned to this node.</p>
+          <%= link_to "Assign webhooks", edit_node_path(@node), class: "text-xs text-primary-container hover:underline mt-1 inline-block" %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
   <%# ── SSL Info ── %>
   <% latest_check = @node.monitor_checks.where.not(ssl_valid: nil).order(checked_at: :desc).first %>
   <% if latest_check %>

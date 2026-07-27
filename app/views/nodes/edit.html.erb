@@ -6,6 +6,6 @@
   </div>
 
   <div class="card">
-    <%= render "form", url: node_path(@node), method: :patch, submit_label: "Save Changes" %>
+    <%= render "form", url: node_path(@node), method: :patch, submit_label: "Save Changes", webhook_endpoints: @webhook_endpoints %>
   </div>
 </div>
