@@ -28,15 +28,15 @@ class MonitorCheckJob < ApplicationJob
   private
 
   def enqueue_webhook_deliveries(monitor, status, result)
-    payload = {
-      monitor_id: monitor.id,
-      monitor_name: monitor.name,
+    payload = WebhookPayloadBuilder.build(
+      event: "check_result",
+      monitor: monitor,
       status: status,
       status_code: result.code,
       response_time: result.duration,
-      checked_at: Time.current,
+      checked_at: Time.current.iso8601,
       ssl_valid: result.ssl_valid
-    }.as_json
+    )
 
     monitor.webhook_endpoints.active.each do |endpoint|
       next unless endpoint.webhook_endpoint_monitors
