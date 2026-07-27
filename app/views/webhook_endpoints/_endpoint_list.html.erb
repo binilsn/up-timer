@@ -32,6 +32,7 @@
                 <% if endpoint.consecutive_failures > 0 %>
                   <span class="text-[10px] text-amber-600 font-medium"><%= endpoint.consecutive_failures %> failure<%= "s" if endpoint.consecutive_failures > 1 %></span>
                 <% end %>
+                <span class="text-[10px] text-slate-400">Edited: <%= time_ago_in_words(endpoint.updated_at) %> ago<% if endpoint.last_editor %> by <%= endpoint.last_editor.name %><% end %></span>
               </div>
             </div>
 

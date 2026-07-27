@@ -21,6 +21,10 @@ class WebhookEndpoint < ApplicationRecord
     token.length > 8 ? "#{token.first(8)}..." : "***"
   end
 
+  def last_editor
+    @last_editor ||= ActionLog.for_record("WebhookEndpoint", id).recent.first&.account
+  end
+
   private
 
   def set_token_prefix
