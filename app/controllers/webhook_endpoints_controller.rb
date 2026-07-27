@@ -13,6 +13,8 @@ class WebhookEndpointsController < ApplicationController
     @endpoint.token = SecureRandom.hex(32)
 
     if @endpoint.save
+      ActionLog.log(action: :created, record: @endpoint, account: current_account,
+                    metadata: { url: @endpoint.url })
       flash[:token] = @endpoint.token
       redirect_to webhook_endpoints_path, notice: "Webhook endpoint created. Copy the token now — it won't be shown again."
     else
@@ -25,6 +27,9 @@ class WebhookEndpointsController < ApplicationController
   def toggle
     @endpoint = WebhookEndpoint.find(params[:id])
     @endpoint.toggle!(:active)
+    ActionLog.log(action: @endpoint.active? ? :activated : :deactivated,
+                  record: @endpoint, account: current_account,
+                  metadata: { url: @endpoint.url })
     @endpoints = WebhookEndpoint.order(created_at: :desc)
     render :toggle
   end
@@ -32,6 +37,8 @@ class WebhookEndpointsController < ApplicationController
   def destroy
     @endpoint = WebhookEndpoint.find(params[:id])
     @endpoint.destroy!
+    ActionLog.log(action: :deleted, record: @endpoint, account: current_account,
+                  metadata: { url: @endpoint.url })
     redirect_to webhook_endpoints_path, notice: "Webhook endpoint deleted."
   end
 
