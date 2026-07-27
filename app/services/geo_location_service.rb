@@ -4,11 +4,9 @@ require "json"
 require "resolv"
 
 class GeoLocationService
-  Result = Struct.new(:latitude, :longitude, :success, keyword_init: true)
-
   # Free tier: 45 requests per minute from one IP. More than enough for
   # occasional monitor creation / URL changes.
-  API_URL = "http://ip-api.com/json/%{ip}?fields=status,lat,lon"
+  API_URL = "http://ip-api.com/json/%{ip}?fields=status,lat,lon,city,regionName,country,countryCode,isp,org,as"
 
   # Non-routable IP ranges that should not be geolocated
   LOCAL_RANGES = [
@@ -38,11 +36,7 @@ class GeoLocationService
     data = fetch_location(ip)
     return failure("api returned #{data["status"]}") unless data["status"] == "success"
 
-    Result.new(
-      latitude: data["lat"].to_f,
-      longitude: data["lon"].to_f,
-      success: true
-    )
+    normalize_location(data)
   end
 
   private
@@ -71,7 +65,22 @@ class GeoLocationService
     true
   end
 
+  def normalize_location(data)
+    {
+      success: true,
+      latitude: data["lat"].to_f,
+      longitude: data["lon"].to_f,
+      city: data["city"],
+      region: data["regionName"],
+      country: data["country"],
+      country_code: data["countryCode"],
+      isp: data["isp"],
+      org: data["org"],
+      asn: data["as"]
+    }.compact
+  end
+
   def failure(reason)
-    Result.new(success: false)
+    { success: false }
   end
 end
