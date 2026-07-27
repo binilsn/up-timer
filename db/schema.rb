@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_25_101525) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_27_055733) do
   create_table "account_login_change_keys", force: :cascade do |t|
     t.datetime "deadline", null: false
     t.string "key", null: false
@@ -297,6 +297,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_25_101525) do
 
   create_table "webhook_endpoints", force: :cascade do |t|
     t.boolean "active", default: true, null: false
+    t.integer "consecutive_failures", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "last_delivered_at"
     t.string "token", null: false

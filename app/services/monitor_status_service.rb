@@ -37,6 +37,7 @@ class MonitorStatusService
 
     @monitor.update!(status: "down")
     create_incident_and_alert if @monitor.incidents.where(resolved_at: nil).none?
+    enqueue_webhook_status_change("up", "down")
   end
 
   def transition_to_up
@@ -51,6 +52,7 @@ class MonitorStatusService
          .update_all(resolved: true, resolved_at: Time.current)
 
     notify_recovery
+    enqueue_webhook_status_change("down", "up")
   end
 
   def create_incident_and_alert
@@ -73,6 +75,24 @@ class MonitorStatusService
 
     Recipient.active.pluck(:email).each do |email|
       AlertMailer.alert_recovered(email, @monitor.id).deliver_now
+    end
+  end
+
+  def enqueue_webhook_status_change(previous_status, new_status)
+    payload = {
+      monitor_id: @monitor.id,
+      monitor_name: @monitor.name,
+      previous_status: previous_status,
+      new_status: new_status,
+      timestamp: Time.current
+    }.as_json
+
+    @monitor.webhook_endpoints.active.each do |endpoint|
+      next unless endpoint.webhook_endpoint_monitors
+                           .find_by(monitor_id: @monitor.id)
+                           &.sends_event?("status_change")
+
+      WebhookDeliveryJob.perform_later(endpoint.id, "status_change", payload)
     end
   end
 end
