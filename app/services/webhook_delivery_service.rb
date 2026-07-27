@@ -17,6 +17,8 @@ class WebhookDeliveryService
   end
 
   def call
+    return safety_result unless UrlValidator.public_url?(@webhook_endpoint.url)
+
     body = build_body
     token = compute_token(body)
 
@@ -75,5 +77,10 @@ class WebhookDeliveryService
     else
       @webhook_endpoint.update!(consecutive_failures: failures)
     end
+  end
+
+  def safety_result
+    @webhook_endpoint.update!(active: false)
+    Result.new(success: false, status_code: nil, message: "Blocked: internal/private URL")
   end
 end
