@@ -4,7 +4,7 @@ class WebhookEndpoint < ApplicationRecord
 
   before_validation :set_token_prefix, on: :create
 
-  validates :url, presence: true, format: { with: /\Ahttps?:\/\/.+\z/, message: "must be a valid HTTP(S) URL" }
+  validates :url, presence: true, url: true
   validates :token, presence: true
 
   scope :active, -> { where(active: true) }
