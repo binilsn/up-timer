@@ -51,6 +51,9 @@ gem "chartkick"
 # Pagination [https://github.com/ddnexus/pagy]
 gem "pagy"
 
+# JWT for webhook token handling
+gem "jwt"
+
 group :development, :test do
   # Debugging with Pry [https://github.com/pry/pry]
   gem "pry-rails"
