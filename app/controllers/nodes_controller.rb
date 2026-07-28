@@ -23,13 +23,16 @@ class NodesController < ApplicationController
 
   def edit
     @node = UptimeMonitor.find(params[:id])
+    @webhook_endpoints = WebhookEndpoint.active.order(:url)
   end
 
   def update
     @node = UptimeMonitor.find(params[:id])
     if @node.update(node_params)
+      sync_webhook_assignments
       redirect_to node_path(@node), notice: "Node updated."
     else
+      @webhook_endpoints = WebhookEndpoint.active.order(:url)
       render :edit, status: :unprocessable_entity
     end
   end
@@ -120,6 +123,23 @@ class NodesController < ApplicationController
   private
 
   def node_params
-    params.require(:uptime_monitor).permit(:name, :url, :check_interval, :check_interval_hours, :check_interval_minutes, :check_interval_seconds, :timeout, :request_type, :expected_status, :request_body, :down_threshold, :tag_list, :public_listed, tags: [])
+    params.require(:uptime_monitor).permit(:name, :url, :check_interval, :check_interval_hours, :check_interval_minutes, :check_interval_seconds, :timeout, :request_type, :expected_status, :request_body, :down_threshold, :tag_list, :public_listed, tags: [], webhook_endpoint_ids: [])
+  end
+
+  def sync_webhook_assignments
+    selected_ids = Array(params.dig(:uptime_monitor, :webhook_endpoint_ids)).map(&:to_i)
+    events_by_id = params[:webhook_events]&.to_unsafe_h || {}
+
+    # Remove unchecked endpoints
+    @node.webhook_endpoint_monitors.where.not(webhook_endpoint_id: selected_ids).destroy_all
+
+    # Create or update checked endpoints
+    selected_ids.each do |wid|
+      events = Array(events_by_id[wid.to_s]).compact_blank
+      next if events.empty?
+
+      join = @node.webhook_endpoint_monitors.find_or_initialize_by(webhook_endpoint_id: wid)
+      join.update!(events: events.join(","))
+    end
   end
 end
