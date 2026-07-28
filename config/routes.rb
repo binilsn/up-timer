@@ -53,7 +53,7 @@ Rails.application.routes.draw do
     post "triggers/:id/toggle_email", to: "alert_integrations#toggle_trigger_email", as: :toggle_trigger_email
   end
 
-  resources :webhook_endpoints, only: [ :index, :create, :destroy ] do
+  resources :webhook_endpoints, only: [ :index, :create, :edit, :update, :destroy ] do
     member do
       patch :toggle
     end

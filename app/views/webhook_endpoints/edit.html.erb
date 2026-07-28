@@ -1,0 +1,10 @@
+<%= turbo_frame_tag dom_id(@endpoint, :edit) do %>
+  <%= form_with model: @endpoint, url: webhook_endpoint_path(@endpoint), method: :patch, class: "flex items-center gap-2 p-3 -mt-2 mb-2 border border-primary-container/30 rounded-default bg-primary-container/5" do |f| %>
+    <%= f.url_field :url, class: "input-field flex-1 text-sm" %>
+    <%= f.button "Update", class: "btn btn-primary text-xs flex-shrink-0" %>
+    <%= link_to "Cancel", webhook_endpoints_path, class: "btn btn-secondary text-xs flex-shrink-0" %>
+  <% end %>
+  <% if @endpoint.errors[:url].any? %>
+    <p class="text-xs text-error px-3 pb-2"><%= @endpoint.errors[:url].to_sentence %></p>
+  <% end %>
+<% end %>

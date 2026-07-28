@@ -5,19 +5,10 @@ class WebhookEndpointsController < ApplicationController
 
   def index
     @endpoints = WebhookEndpoint.order(created_at: :desc)
-    @new_endpoint = if params[:edit_id]
-      WebhookEndpoint.find(params[:edit_id])
-    else
-      WebhookEndpoint.new
-    end
+    @new_endpoint = WebhookEndpoint.new
   end
 
   def create
-    if params[:edit_id].present?
-      do_update
-      return
-    end
-
     @endpoint = WebhookEndpoint.new(endpoint_params)
     @endpoint.token = SecureRandom.hex(32)
 
@@ -30,6 +21,21 @@ class WebhookEndpointsController < ApplicationController
       @endpoints = WebhookEndpoint.order(created_at: :desc)
       @new_endpoint = @endpoint
       render :index, status: :unprocessable_entity
+    end
+  end
+
+  def edit
+    @endpoint = WebhookEndpoint.find(params[:id])
+  end
+
+  def update
+    @endpoint = WebhookEndpoint.find(params[:id])
+    if @endpoint.update(endpoint_params)
+      ActionLog.log(action: :updated, record: @endpoint, account: current_account,
+                    metadata: { url: @endpoint.url })
+      redirect_to webhook_endpoints_path, notice: "Webhook endpoint updated."
+    else
+      render :edit, status: :unprocessable_entity
     end
   end
 
@@ -52,19 +58,6 @@ class WebhookEndpointsController < ApplicationController
   end
 
   private
-
-  def do_update
-    @endpoint = WebhookEndpoint.find(params[:edit_id])
-    if @endpoint.update(endpoint_params)
-      ActionLog.log(action: :updated, record: @endpoint, account: current_account,
-                    metadata: { url: @endpoint.url })
-      redirect_to webhook_endpoints_path, notice: "Webhook endpoint updated."
-    else
-      @endpoints = WebhookEndpoint.order(created_at: :desc)
-      @new_endpoint = @endpoint
-      render :index, status: :unprocessable_entity
-    end
-  end
 
   def endpoint_params
     params.require(:webhook_endpoint).permit(:url)
