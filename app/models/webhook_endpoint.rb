@@ -4,7 +4,7 @@ class WebhookEndpoint < ApplicationRecord
 
   before_validation :set_token_prefix, on: :create
 
-  validates :url, presence: true, url: true
+  validates :url, presence: true, url: true, unless: -> { Rails.env.development? }
   validates :token, presence: true
 
   scope :active, -> { where(active: true) }

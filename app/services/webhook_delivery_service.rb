@@ -17,7 +17,7 @@ class WebhookDeliveryService
   end
 
   def call
-    return safety_result unless UrlValidator.public_url?(@webhook_endpoint.url)
+    return safety_result unless UrlValidator.public_url?(@webhook_endpoint.url) || Rails.env.development?
 
     body = build_body
     token = compute_token(body)
