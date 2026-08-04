@@ -393,4 +393,4 @@ app's `db/` directory — Docker seeds a volume only once, at first mount, so it
 migration file from the container.
 
 The full diagnosis and fix steps live in the deployment guide:
-[`deploy/README.md` → Troubleshooting](deploy/README.md).
+[`deploy/README.md` → Troubleshooting](deploy/README.md#troubleshooting).
