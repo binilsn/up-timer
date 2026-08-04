@@ -334,6 +334,17 @@ test_pg_override_volume_resolved() {
     teardown
 }
 
+test_pg_override_resolved_db_provider() {
+    setup
+    generate "kamal-proxy" \
+        "DB_PROVIDER=postgres" \
+        "POSTGRES_USER=uptimer" \
+        "POSTGRES_PASSWORD=secret"
+    assert_resolved_with_pg "postgres: DB_PROVIDER set for adapter routing" "DB_PROVIDER: postgres"
+    assert_resolved_not "postgres: no /rails/db volume mount" "/rails/db"
+    teardown
+}
+
 # ── Main ─────────────────────────────────────
 
 main() {
@@ -379,6 +390,7 @@ main() {
     test_pg_override_healthcheck_resolved
     test_pg_override_app_depends_on_db
     test_pg_override_volume_resolved
+    test_pg_override_resolved_db_provider
 
     echo ""
     summary
