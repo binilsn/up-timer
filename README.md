@@ -380,3 +380,17 @@ git push origin v1.0.0
 ```
 
 Or create a [GitHub Release](https://github.com/senbinil/up-timer/releases) via the UI — same result.
+
+## Troubleshooting
+
+### Deploying a release doesn't apply migrations (volume shadowing)
+
+**Affected:** installers before **0.4.1** · **Fixed in:** **0.4.1**
+
+If an upgrade ships a new migration but `db:migrate` / `db:prepare` never apply it (e.g. the
+dashboard raises `undefined local variable or method 'location'`), a volume is shadowing the
+app's `db/` directory — Docker seeds a volume only once, at first mount, so it hides every later
+migration file from the container.
+
+The full diagnosis and fix steps live in the deployment guide:
+[`deploy/README.md` → Troubleshooting](deploy/README.md#troubleshooting).
