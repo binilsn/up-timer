@@ -306,6 +306,8 @@ The external network doesn't exist. Verify with `docker network ls`. The install
 
 ### Migrations never apply on upgrade (missing column / "undefined local variable or method")
 
+**Affected:** installers before **0.4.1** · **Fixed in:** **0.4.1** (installers from 0.4.1 no longer mount `/rails/db`)
+
 **Symptom:** after updating the image, a new migration never runs. For example, the dashboard
 raises `undefined local variable or method 'location'` (or similar), `ls /rails/db/migrate`
 inside the container is missing files that exist in the image, and `db:migrate` reports nothing

@@ -385,40 +385,12 @@ Or create a [GitHub Release](https://github.com/senbinil/up-timer/releases) via 
 
 ### Deploying a release doesn't apply migrations (volume shadowing)
 
-If an upgrade ships a new migration but `db:migrate` / `db:prepare` never apply it (for example
-the dashboard raises `undefined local variable or method 'location'`), a volume is probably
-shadowing the app's `db/` directory.
+**Affected:** installers before **0.4.1** · **Fixed in:** **0.4.1**
 
-Docker copies image content into a volume only **once**, at first mount. If a volume is mounted
-over `db/`, it hides every later migration file from the container — `db:migrate` sees only the
-stale copy. Tell-tale mismatch: the file exists in the image but not in the container.
+If an upgrade ships a new migration but `db:migrate` / `db:prepare` never apply it (e.g. the
+dashboard raises `undefined local variable or method 'location'`), a volume is shadowing the
+app's `db/` directory — Docker seeds a volume only once, at first mount, so it hides every later
+migration file from the container.
 
-```bash
-# File present in the image…
-docker run --rm binilsn/up-timer:latest ls /rails/db/migrate | grep <migration>
-
-# …but missing inside the running container
-docker compose -f docker-compose.generated.yml exec up-timer ls /rails/db/migrate | grep <migration>
-```
-
-**Fix** (from the deploy directory — add `-f deploy/docker-compose.pg.yml` when using PostgreSQL):
-
-```bash
-# 1. Remove the shadowing volume mount from the generated compose
-sed -i '/up-timer-db:\/rails\/db/d' docker-compose.generated.yml
-
-# 2. Recreate the container so /rails/db comes from the image
-# 3. Run pending migrations (the entrypoint's db:prepare does this on boot too)
-docker compose -f docker-compose.generated.yml -f deploy/docker-compose.pg.yml \
-  --env-file deploy/.env up -d --force-recreate
-
-docker compose -f docker-compose.generated.yml -f deploy/docker-compose.pg.yml \
-  --env-file deploy/.env exec up-timer bin/rails db:migrate
-
-# 4. Delete the stale volume (safe — your data is in the storage/pgdata volumes)
-docker volume rm up-timer-db
-```
-
-Deployments made with installer versions before 0.4.1 may have this volume; installers from
-0.4.1 onward never mount `/rails/db`. See `deploy/README.md` → **Troubleshooting** for the full
-walkthrough.
+The full diagnosis and fix steps live in the deployment guide:
+[`deploy/README.md` → Troubleshooting](deploy/README.md).
