@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_30_084532) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_25_101525) do
   create_table "account_login_change_keys", force: :cascade do |t|
     t.datetime "deadline", null: false
     t.string "key", null: false
@@ -117,9 +117,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_084532) do
     t.datetime "created_at", null: false
     t.integer "down_threshold", default: 1, null: false
     t.integer "expected_status"
+    t.decimal "latitude", precision: 10, scale: 7
+    t.json "location", default: {}
+    t.decimal "longitude", precision: 10, scale: 7
     t.string "name", null: false
     t.boolean "paused", default: false, null: false
     t.integer "position", default: 0, null: false
+    t.boolean "public_listed"
     t.text "request_body"
     t.string "request_type", default: "GET", null: false
     t.string "status", default: "unknown", null: false

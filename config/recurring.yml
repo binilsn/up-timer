@@ -1,7 +1,21 @@
+# examples:
+#   periodic_cleanup:
+#     class: CleanSoftDeletedRecordsJob
+#     queue: background
+#     args: [ 1000, { batch_size: 500 } ]
+#     schedule: every hour
+#   periodic_cleanup_with_command:
+#     command: "SoftDeletedRecord.due.delete_all"
+#     priority: 2
+#     schedule: at 5am every day
+
 development:
     monitor_scheduler:
         class: MonitorSchedulerJob
         schedule: every 30 seconds
+    dashboard_broadcast:
+        class: DashboardBroadcastJob
+        schedule: every 2 seconds
     data_retention:
         class: DataRetentionJob
         schedule: every day at 3am
@@ -13,6 +27,9 @@ production:
     monitor_scheduler:
         class: MonitorSchedulerJob
         schedule: every 30 seconds
+    dashboard_broadcast:
+        class: DashboardBroadcastJob
+        schedule: every 2 seconds
     data_retention:
         class: DataRetentionJob
         schedule: every day at 3am

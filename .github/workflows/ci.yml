@@ -3,7 +3,11 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   scan_ruby:
@@ -20,10 +24,10 @@ jobs:
 
       - name: Scan for common Rails security vulnerabilities using static analysis
         run: bin/brakeman --no-pager
-      
+
       - name: Scan for known security vulnerabilities in gems used
         run: bin/bundler-audit
-      
+
   scan_js:
     runs-on: ubuntu-latest
 
@@ -66,17 +70,35 @@ jobs:
         run: bin/rubocop -f github
 
   test:
+    name: test (${{ matrix.database }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [sqlite, postgres]
+      fail-fast: false
 
-    # services:
-    #  redis:
-    #    image: valkey/valkey:8
-    #    ports:
-    #      - 6379:6379
-    #    options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: uptimer
+          POSTGRES_PASSWORD: uptimer
+          POSTGRES_DB: uptimer_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      # redis:
+      #   image: valkey/valkey:8
+      #   ports:
+      #     - 6379:6379
+      #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips libpq-dev
 
       - name: Checkout code
         uses: actions/checkout@v7
@@ -86,11 +108,20 @@ jobs:
         with:
           bundler-cache: true
 
-      - name: Run tests
+      - name: Run tests (SQLite)
+        if: matrix.database == 'sqlite'
         env:
           RAILS_ENV: test
-          # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-          # REDIS_URL: redis://localhost:6379/0
+        run: |
+          bin/rails db:test:prepare
+          bundle exec rspec
+
+      - name: Run tests (PostgreSQL)
+        if: matrix.database == 'postgres'
+        env:
+          RAILS_ENV: test
+          DB_PROVIDER: postgres
+          DATABASE_URL: postgres://uptimer:uptimer@localhost:5432/uptimer_test
         run: |
           bin/rails db:test:prepare
           bundle exec rspec
@@ -99,6 +130,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev
+
       - name: Checkout code
         uses: actions/checkout@v7
 
