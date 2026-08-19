@@ -207,6 +207,8 @@ test_pg_override_generated() {
         "postgres: has pgdata volume"
     assert_contains "$pg_file" "DATABASE_URL" \
         "postgres: sets DATABASE_URL"
+    assert_contains "$pg_file" "DB_PROVIDER=postgres" \
+        "postgres: sets DB_PROVIDER for adapter routing"
     teardown
 }
 
@@ -308,7 +310,8 @@ test_all_modes_have_volumes() {
     for mode in standalone kamal-proxy existing-traefik nginx cloudflare ip-only; do
         setup; generate "$mode"
         assert_contains "$COMPOSE_PATH" "up-timer-storage:" "$mode: has storage volume"
-        assert_contains "$COMPOSE_PATH" "up-timer-db:"     "$mode: has db volume"
+        assert_not_contains "$COMPOSE_PATH" "up-timer-db:" "$mode: no db volume (prevents /rails/db shadowing)"
+        assert_not_contains "$COMPOSE_PATH" "/rails/db" "$mode: no /rails/db mount"
         teardown
     done
 }
