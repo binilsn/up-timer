@@ -3,10 +3,10 @@
 # Self-contained — no repo clone needed.
 #
 # One-liner:
-#   bash <(curl -sSL https://raw.githubusercontent.com/binilsn/up-timer/main/deploy/installer.sh)
+#   bash <(curl -sSL https://raw.githubusercontent.com/senbinil/up-timer/main/deploy/installer.sh)
 #
 # Or save and run:
-#   curl -sSLO https://raw.githubusercontent.com/binilsn/up-timer/main/deploy/installer.sh
+#   curl -sSLO https://raw.githubusercontent.com/senbinil/up-timer/main/deploy/installer.sh
 #   chmod +x installer.sh && ./installer.sh
 
 set -euo pipefail
@@ -19,6 +19,7 @@ PROJECT_DIR="$(pwd)"
 DEPLOY_DIR="$PROJECT_DIR/deploy"
 ENV_FILE="$DEPLOY_DIR/.env"
 COMPOSE_OUT="$PROJECT_DIR/docker-compose.generated.yml"
+PG_COMPOSE_OUT="$DEPLOY_DIR/docker-compose.pg.yml"
 NGINX_CONF="$DEPLOY_DIR/nginx.conf"
 
 # Ensure deploy directory exists
@@ -147,6 +148,9 @@ check_existing_deployment() {
         source_env "$ENV_FILE"
         info "Domain: ${DOMAIN:-unknown}"
         info "Mode: ${DEPLOY_MODE:-unknown}"
+        local detected_db="sqlite"
+        [ -f "$PG_COMPOSE_OUT" ] && detected_db="postgres"
+        info "Database: ${detected_db}"
         echo ""
         echo "  1) Update — pull latest image and restart"
         echo "  2) Reconfigure — change settings"
@@ -173,10 +177,13 @@ source_env() {
 
 update_deployment() {
     echo ""
+    source_env "$ENV_FILE"
+    local pg_flag=""
+    [ -f "$PG_COMPOSE_OUT" ] && pg_flag="-f $PG_COMPOSE_OUT"
     info "Pulling latest image..."
-    docker compose -f "$COMPOSE_OUT" pull
+    docker compose -f "$COMPOSE_OUT" $pg_flag pull
     info "Restarting containers..."
-    docker compose -f "$COMPOSE_OUT" up -d --remove-orphans
+    docker compose -f "$COMPOSE_OUT" $pg_flag up -d --remove-orphans
     ok "Deployment updated"
 }
 
@@ -188,8 +195,10 @@ uninstall_deployment() {
         echo "Cancelled."
         exit 0
     fi
-    docker compose -f "$COMPOSE_OUT" down --volumes --remove-orphans 2>/dev/null || true
-    rm -f "$COMPOSE_OUT" "$ENV_FILE" "$NGINX_CONF"
+    local pg_flag=""
+    [ -f "$PG_COMPOSE_OUT" ] && pg_flag="-f $PG_COMPOSE_OUT"
+    docker compose -f "$COMPOSE_OUT" $pg_flag down --volumes --remove-orphans 2>/dev/null || true
+    rm -f "$COMPOSE_OUT" "$ENV_FILE" "$PG_COMPOSE_OUT" "$NGINX_CONF"
     ok "Deployment removed"
 }
 
@@ -234,7 +243,18 @@ collect_env() {
     # App vars (common)
     read -rp "  Image tag [latest]: " TAG; TAG=${TAG:-latest}
 
+    # Auto-generate SECRET_KEY_BASE if not already set
+    if [ -z "${SECRET_KEY_BASE:-}" ]; then
+        SECRET_KEY_BASE=$(openssl rand -hex 64)
+        info "SECRET_KEY_BASE auto-generated"
+    fi
+
     read -rp "  Admin emails (comma-separated, optional): " ADMIN_EMAILS
+
+    # RAILS_MAX_THREADS auto-detection
+    detect_thread_count
+    read -rp "  RAILS_MAX_THREADS [3] (auto-detected: $SUGGESTED_THREADS): " RAILS_MAX_THREADS
+    RAILS_MAX_THREADS=${RAILS_MAX_THREADS:-3}
 
     # Email config
     echo ""
@@ -246,9 +266,20 @@ collect_env() {
     elif [ "$MAIL_PROVIDER" = "mailgun" ]; then
         read -rp "  Mailgun API key: " MAILGUN_API_KEY
         read -rp "  Mailgun domain: " MAILGUN_DOMAIN
+        read -rp "  Mailgun API host [api.mailgun.net]: " MAILGUN_API_HOST
         read -rp "  Mail from address [noreply@example.com]: " MAIL_FROM
     fi
     MAIL_FROM=${MAIL_FROM:-noreply@example.com}
+
+    # For postgres
+    read -rp "  Database provider [sqlite/postgres]: " DB_PROVIDER;
+    DB_PROVIDER=${DB_PROVIDER:-sqlite}
+    if [ "$DB_PROVIDER" = "postgres" ]; then
+        read -rp "  Database username [uptimer]: " DB_USERNAME;
+        DB_USERNAME=${DB_USERNAME:-uptimer}
+        read -rp "  Database password [uptimer]: " DB_PASSWORD;
+        DB_PASSWORD=${DB_PASSWORD:-uptimer}
+    fi
 
     # Mode-specific
     case "$MODE" in
@@ -439,6 +470,34 @@ collect_ip_env() {
     DEPLOY_MODE=ip-only
 }
 
+# ── RAILS_MAX_THREADS auto-detection ──────────
+
+detect_thread_count() {
+    local ram_mb=1024
+    local cpu_cores=1
+
+    if command -v free &>/dev/null; then
+        ram_mb=$(free -m 2>/dev/null | awk '/Mem:/ {print $7}' || echo 1024)
+    fi
+
+    if command -v nproc &>/dev/null; then
+        cpu_cores=$(nproc 2>/dev/null || echo 1)
+    fi
+
+    # Reserve ~512MB for OS + Puma, assume ~100MB per thread
+    local by_ram=$(( (ram_mb - 512) / 100 ))
+    if [ "$by_ram" -lt 0 ]; then by_ram=0; fi
+
+    # Cap by CPU (4 threads per core is a practical CRuby limit)
+    local by_cpu=$((cpu_cores * 4))
+
+    SUGGESTED_THREADS=$(( by_ram < by_cpu ? by_ram : by_cpu ))
+
+    # Clamp between 3 and 16
+    if [ "$SUGGESTED_THREADS" -lt 3 ]; then SUGGESTED_THREADS=3; fi
+    if [ "$SUGGESTED_THREADS" -gt 16 ]; then SUGGESTED_THREADS=16; fi
+}
+
 # ── Write .env ───────────────────────────────
 
 write_env_file() {
@@ -448,19 +507,29 @@ write_env_file() {
 
 # App
 TAG=${TAG}
-RAILS_MASTER_KEY=${RAILS_MASTER_KEY:-}
+SECRET_KEY_BASE=${SECRET_KEY_BASE:-}
+RAILS_MAX_THREADS=${RAILS_MAX_THREADS:-3}
 ADMIN_EMAILS=${ADMIN_EMAILS:-}
 APP_HOST=${APP_HOST:-}
 MAIL_PROVIDER=${MAIL_PROVIDER:-}
 MAIL_FROM=${MAIL_FROM:-noreply@example.com}
 RESEND_API_KEY=${RESEND_API_KEY:-}
 MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
+MAILGUN_API_HOST=${MAILGUN_API_HOST:-}
 MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
 DOMAIN=${DOMAIN:-}
 TRAEFIK_NETWORK=${TRAEFIK_NETWORK:-}
 ENTRYPOINT=${ENTRYPOINT:-websecure}
 DEPLOY_MODE=${DEPLOY_MODE}
 EOF
+
+# Database specific
+    if [ "$DB_PROVIDER" = "postgres" ]; then
+        cat >> "$ENV_FILE" << EOF
+POSTGRES_USER=${DB_USERNAME}
+POSTGRES_PASSWORD=${DB_PASSWORD}
+EOF
+    fi
 
     # Mode-specific vars
     case "$MODE" in
@@ -517,7 +586,8 @@ END_PORTS
     cat << 'END_APP_ENV'
     environment:
       - RAILS_ENV=production
-      - RAILS_MASTER_KEY=${RAILS_MASTER_KEY}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - RAILS_MAX_THREADS=${RAILS_MAX_THREADS:-3}
       - SOLID_QUEUE_IN_PUMA=true
       - APP_HOST=${APP_HOST}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-}
@@ -525,10 +595,10 @@ END_PORTS
       - MAIL_FROM=${MAIL_FROM:-noreply@example.com}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
+      - MAILGUN_API_HOST=${MAILGUN_API_HOST:-}
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
     volumes:
       - up-timer-storage:/rails/storage
-      - up-timer-db:/rails/db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/up"]
       interval: 10s
@@ -553,7 +623,6 @@ END_LABELS
 write_common_volumes() {
     cat << 'END_VOL'
   up-timer-storage:
-  up-timer-db:
 END_VOL
 }
 
@@ -771,6 +840,10 @@ END
             ;;
     esac
 
+    if [ "${DB_PROVIDER:-}" = "postgres" ]; then
+        write_pg_compose
+    fi
+
     ok "Generated docker-compose.generated.yml"
 }
 
@@ -780,8 +853,8 @@ deploy() {
     echo ""
     echo -e "${BOLD}Deploy summary:${NC}"
     echo "  Mode:      $DEPLOY_MODE"
-    [ -n "${DOMAIN:-}" ] && echo "  Domain:    $DOMAIN"
-    [ -n "${TAG:-}" ] && echo "  Image tag: $TAG"
+    if [ -n "${DOMAIN:-}" ]; then echo "  Domain:    $DOMAIN"; fi
+    if [ -n "${TAG:-}" ]; then echo "  Image tag: $TAG"; fi
     echo ""
 
     read -rp "  Start containers now? [Y/n]: " deploy_confirm
@@ -790,7 +863,9 @@ deploy() {
         echo ""
         info "To start later, run:"
         echo ""
-        echo "  docker compose -f docker-compose.generated.yml --env-file deploy/.env up -d"
+        local pg_flag=""
+        [ "${DB_PROVIDER:-sqlite}" = "postgres" ] && pg_flag="-f deploy/docker-compose.pg.yml"
+        echo "  docker compose -f docker-compose.generated.yml $pg_flag --env-file deploy/.env up -d"
         echo ""
         exit 0
     fi
@@ -799,7 +874,9 @@ deploy() {
     info "Starting containers..."
 
     cd "$PROJECT_DIR"
-    docker compose -f "$COMPOSE_OUT" --env-file "$ENV_FILE" up -d
+    local pg_flag=""
+    [ "${DB_PROVIDER:-sqlite}" = "postgres" ] && pg_flag="-f $PG_COMPOSE_OUT"
+    docker compose -f "$COMPOSE_OUT" $pg_flag --env-file "$ENV_FILE" up -d
 
     if [ "$DEPLOY_MODE" = "kamal-proxy" ] && [ -n "${DOMAIN:-}" ]; then
         echo ""
@@ -836,6 +913,44 @@ deploy() {
     echo "  Update:        ./deploy/installer.sh"
 }
 
+write_pg_compose() {
+    cat > "$PG_COMPOSE_OUT" << PGEOF
+# Generated by deploy/installer.sh
+# PostgreSQL override — use with:
+#   docker compose -f docker-compose.generated.yml -f deploy/docker-compose.pg.yml --env-file deploy/.env up -d
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: uptimer-db
+    environment:
+      POSTGRES_USER: \${POSTGRES_USER}
+      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
+      POSTGRES_DB: \${POSTGRES_DB:-uptimer}
+    volumes:
+      - up-timer-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \${POSTGRES_USER:-uptimer}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - web
+
+  up-timer:
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@db:5432/\${POSTGRES_DB:-uptimer}
+      - DB_PROVIDER=postgres
+
+volumes:
+  up-timer-pgdata:
+PGEOF
+    ok "Generated deploy/docker-compose.pg.yml"
+}
 # ── Determine mode from choice ───────────────
 
 resolve_mode() {

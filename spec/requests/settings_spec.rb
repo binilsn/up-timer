@@ -14,13 +14,6 @@ RSpec.describe "Settings", type: :request do
       get settings_path
       expect(response).to have_http_status(:ok)
     end
-
-    it "generates a status_token if blank" do
-      account = create(:account, status_token: nil)
-      sign_in(account)
-      get settings_path
-      expect(account.reload.status_token).to be_present
-    end
   end
 
   describe "PATCH /settings" do
@@ -40,22 +33,6 @@ RSpec.describe "Settings", type: :request do
       account = sign_in
       patch settings_path, params: { user_preference: { dashboard_limit: 10 }, account: { name: account.name } }
       expect(response).to redirect_to(settings_path)
-    end
-  end
-
-  describe "POST /settings/toggle_email_notifications" do
-    it "enables email notifications when disabled" do
-      Flipper.disable(:email_notifications)
-      sign_in
-      post toggle_email_notifications_settings_path
-      expect(Flipper.enabled?(:email_notifications)).to be(true)
-    end
-
-    it "disables email notifications when enabled" do
-      Flipper.enable(:email_notifications)
-      sign_in
-      post toggle_email_notifications_settings_path
-      expect(Flipper.enabled?(:email_notifications)).to be(false)
     end
   end
 end

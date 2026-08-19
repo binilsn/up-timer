@@ -20,7 +20,12 @@ class RodauthMain < Rodauth::Rails::Auth
 
     # ==> General
     # Initialize Sequel and have it reuse Active Record's database connection.
-    db Sequel.sqlite(extensions: :activerecord_connection, keep_reference: false)
+    # Dynamically picks the correct Sequel adapter based on the configured ActiveRecord adapter.
+    sequel_adapter = {
+      "sqlite3" => "sqlite",
+      "postgresql" => "postgres"
+    }.fetch(ActiveRecord::Base.connection_db_config.configuration_hash[:adapter]) { "sqlite" }
+    db Sequel.send(sequel_adapter, extensions: :activerecord_connection, keep_reference: false)
     # Avoid DB query that checks accounts table schema at boot time.
     convert_token_id_to_integer? { Account.columns_hash["id"].type == :integer }
 
@@ -151,6 +156,15 @@ class RodauthMain < Rodauth::Rails::Auth
     extend_remember_deadline? true
 
     # ==> Hooks
+    # Prevent Rodauth's reset_password feature from injecting the forgot password
+    # form/link into the login page after a failed login attempt.
+    auth_class_eval do
+      def after_login_failure
+        super
+        @login_form_header = nil
+      end
+    end
+
     # Validate custom fields in the create account form.
     before_create_account do
       throw_error_status(422, "name", "must be present") if param("name").blank?

@@ -6,8 +6,10 @@ gem "rails", "~> 8.1.3"
 gem "propshaft"
 # Use sqlite3 as the database for Active Record
 gem "sqlite3", ">= 2.1"
+gem "pg", "~> 1.5"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
+
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
 gem "importmap-rails"
 # Hotwire's SPA-like page accelerator [https://turbo.hotwired.dev]
@@ -35,7 +37,8 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 2.0"
+gem "ruby-vips", "~> 2.0"
 
 # Tailwind CSS [https://github.com/rails/tailwindcss-rails]
 gem "tailwindcss-rails"
@@ -53,6 +56,7 @@ group :development, :test do
   # Debugging with Pry [https://github.com/pry/pry]
   gem "pry-rails"
   gem "pry-byebug"
+  gem "foreman", "~> 0.90.0"
 
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
@@ -61,15 +65,15 @@ group :development, :test do
   gem "bundler-audit", require: false
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
-  gem "brakeman", "~> 8.0.5", require: false
+  gem "brakeman", "~> 8.0.6", require: false
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
 
   # RSpec testing framework
-  gem "rspec-rails", "~> 7.1"
+  gem "rspec-rails", "~> 8.0"
   gem "factory_bot_rails"
-  gem "shoulda-matchers", "~> 6.0"
+  gem "shoulda-matchers", "~> 8.0"
   gem "database_cleaner-active_record"
   gem "faker"
 end
@@ -77,6 +81,9 @@ end
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
+
+  # Solid Queue web dashboard
+  gem "mission_control-jobs"
 
   # Preview emails in browser [https://github.com/ryanb/letter_opener]
   gem "letter_opener"
@@ -94,13 +101,8 @@ gem "bcrypt", "~> 3.1", require: false
 # Used by Rodauth for rendering built-in view and email templates
 gem "tilt", "~> 2.4", require: false
 
-# Feature flags [https://github.com/jnunemaker/flipper]
-gem "flipper"
-gem "flipper-active_record"
-
 # Email delivery providers [https://resend.com] [https://www.mailgun.com]
 gem "resend"
 gem "mailgun-ruby"
 
-# Security patches
 gem "net-imap", ">= 0.6.4.1"

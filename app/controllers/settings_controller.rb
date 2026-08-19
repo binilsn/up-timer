@@ -4,7 +4,6 @@ class SettingsController < ApplicationController
 
   def show
     @account = current_account
-    @account.update!(status_token: SecureRandom.urlsafe_base64(24)) if @account.status_token.blank?
     @preference = current_account.preference
   end
 
@@ -23,15 +22,6 @@ class SettingsController < ApplicationController
     else
       render :show, status: :unprocessable_entity
     end
-  end
-
-  def toggle_email_notifications
-    if Flipper.enabled?(:email_notifications)
-      Flipper.disable(:email_notifications)
-    else
-      Flipper.enable(:email_notifications)
-    end
-    render partial: "email_notifications"
   end
 
   private

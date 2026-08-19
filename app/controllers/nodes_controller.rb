@@ -88,6 +88,8 @@ class NodesController < ApplicationController
       format.turbo_stream
       format.html { redirect_to node_path(@node), notice: "#{@node.name} paused." }
     end
+
+    DashboardBroadcastService.call(updated_nodes: @node)
   end
 
   def resume
@@ -105,11 +107,19 @@ class NodesController < ApplicationController
       format.turbo_stream
       format.html { redirect_to node_path(@node), notice: "#{@node.name} resumed." }
     end
+
+    DashboardBroadcastService.call(updated_nodes: @node)
+  end
+
+  def toggle_public_listed
+    @node = UptimeMonitor.find(params[:id])
+    @node.update!(public_listed: !@node.public_listed)
+    render partial: "nodes/public_listed_frame", locals: { node: @node }
   end
 
   private
 
   def node_params
-    params.require(:uptime_monitor).permit(:name, :url, :check_interval, :timeout, :request_type, :expected_status, :request_body, :down_threshold, :tag_list, tags: [])
+    params.require(:uptime_monitor).permit(:name, :url, :check_interval, :check_interval_hours, :check_interval_minutes, :check_interval_seconds, :timeout, :request_type, :expected_status, :request_body, :down_threshold, :tag_list, :public_listed, tags: [])
   end
 end
