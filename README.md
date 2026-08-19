@@ -51,6 +51,7 @@ docker run -d -p 3000:80 \
   -e ADMIN_EMAILS=admin@example.com \
   -e MAIL_PROVIDER=mailgun \
   -e MAILGUN_API_KEY=key-xxxxxx \
+  -e MAILGUN_API_HOST=api.mailgun.net \
   -e MAILGUN_DOMAIN=mg.example.com \
   -e SOLID_QUEUE_IN_PUMA=true \
   binilsn/up-timer:latest
@@ -63,9 +64,10 @@ docker run -d -p 3000:80 \
 | `ADMIN_EMAILS`        | ❌       | —                     | Comma-separated emails assigned admin role                                             |
 | `MAIL_PROVIDER`       | ❌       | —                     | `resend` or `mailgun`. When empty, accounts auto-verify and alert emails are skipped   |
 | `MAIL_FROM`           | ❌       | `noreply@example.com` | From address for outgoing emails                                                       |
-| `RESEND_API_KEY`      | \*       | —                     | Required when `MAIL_PROVIDER=resend`                                                   |
-| `MAILGUN_API_KEY`     | \*       | —                     | Required when `MAIL_PROVIDER=mailgun`                                                  |
-| `MAILGUN_DOMAIN`      | \*       | —                     | Required when `MAIL_PROVIDER=mailgun`                                                  |
+| `RESEND_API_KEY`      | *       | —                     | Required when `MAIL_PROVIDER=resend`                                                   |
+| `MAILGUN_API_KEY`     | *       | —                     | Required when `MAIL_PROVIDER=mailgun`                                                  |
+| `MAILGUN_API_HOST`    | ❌       | `api.mailgun.net`      | Mailgun API hostname (e.g. `api.eu.mailgun.net` for EU region)                         |
+| `MAILGUN_DOMAIN`      | *       | —                     | Required when `MAIL_PROVIDER=mailgun`                                                  |
 | `APP_HOST`            | ❌       | `example.com`         | Host used for links in email templates                                                 |
 | `SOLID_QUEUE_IN_PUMA` | ❌       | –                     | Set to `true` to run job worker in Puma process (required for single-container deploy) |
 | `DB_PROVIDER`         | ❌       | `sqlite`              | `sqlite` or `postgres`. Switches database adapter at runtime                           |
@@ -378,3 +380,17 @@ git push origin v1.0.0
 ```
 
 Or create a [GitHub Release](https://github.com/senbinil/up-timer/releases) via the UI — same result.
+
+## Troubleshooting
+
+### Deploying a release doesn't apply migrations (volume shadowing)
+
+**Affected:** installers before **0.4.1** · **Fixed in:** **0.4.1**
+
+If an upgrade ships a new migration but `db:migrate` / `db:prepare` never apply it (e.g. the
+dashboard raises `undefined local variable or method 'location'`), a volume is shadowing the
+app's `db/` directory — Docker seeds a volume only once, at first mount, so it hides every later
+migration file from the container.
+
+The full diagnosis and fix steps live in the deployment guide:
+[`deploy/README.md` → Troubleshooting](deploy/README.md#troubleshooting).

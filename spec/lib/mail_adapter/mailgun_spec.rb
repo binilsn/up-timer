@@ -18,14 +18,18 @@ RSpec.describe MailAdapter::Mailgun do
         ENV.delete("MAILGUN_API_HOST")
       end
 
+      it "sets mailgun_settings on ActionMailer::Base" do
+        described_class.configure!
+        expect(ActionMailer::Base.mailgun_settings).to eq({
+          api_key: "key-test-123",
+          domain: "mg.example.com",
+          api_host: "api.mailgun.net"
+        })
+      end
+
       it "sets delivery method to :mailgun" do
         described_class.configure!
         expect(ActionMailer::Base.delivery_method).to eq(:mailgun)
-      end
-
-      it "configures Mailgun client" do
-        expect(Mailgun).to receive(:configure)
-        described_class.configure!
       end
 
       it "returns true" do
@@ -35,26 +39,16 @@ RSpec.describe MailAdapter::Mailgun do
       context "with custom API host" do
         before { ENV["MAILGUN_API_HOST"] = "api.eu.mailgun.net" }
 
-        it "configures Mailgun with custom host" do
-          expect(Mailgun).to receive(:configure) do |&block|
-            config = double
-            expect(config).to receive(:api_key=).with("key-test-123")
-            expect(config).to receive(:api_host=).with("api.eu.mailgun.net")
-            block.call(config)
-          end
+        it "sets api_host to the custom value" do
           described_class.configure!
+          expect(ActionMailer::Base.mailgun_settings[:api_host]).to eq("api.eu.mailgun.net")
         end
       end
 
       context "without API host" do
-        it "does not set api_host" do
-          expect(Mailgun).to receive(:configure) do |&block|
-            config = double
-            expect(config).to receive(:api_key=).with("key-test-123")
-            expect(config).not_to receive(:api_host=)
-            block.call(config)
-          end
+        it "defaults api_host to api.mailgun.net" do
           described_class.configure!
+          expect(ActionMailer::Base.mailgun_settings[:api_host]).to eq("api.mailgun.net")
         end
       end
     end

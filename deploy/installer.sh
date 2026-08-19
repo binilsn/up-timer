@@ -267,7 +267,6 @@ collect_env() {
         read -rp "  Mailgun API key: " MAILGUN_API_KEY
         read -rp "  Mailgun domain: " MAILGUN_DOMAIN
         read -rp "  Mailgun API host [api.mailgun.net]: " MAILGUN_API_HOST
-        MAILGUN_API_HOST=\${MAILGUN_API_HOST:-api.mailgun.net}
         read -rp "  Mail from address [noreply@example.com]: " MAIL_FROM
     fi
     MAIL_FROM=${MAIL_FROM:-noreply@example.com}
@@ -600,7 +599,6 @@ END_PORTS
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
     volumes:
       - up-timer-storage:/rails/storage
-      - up-timer-db:/rails/db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/up"]
       interval: 10s
@@ -625,7 +623,6 @@ END_LABELS
 write_common_volumes() {
     cat << 'END_VOL'
   up-timer-storage:
-  up-timer-db:
 END_VOL
 }
 
@@ -947,6 +944,7 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@db:5432/\${POSTGRES_DB:-uptimer}
+      - DB_PROVIDER=postgres
 
 volumes:
   up-timer-pgdata:
