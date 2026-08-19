@@ -303,3 +303,56 @@ The external network doesn't exist. Verify with `docker network ls`. The install
 
 - Verify the tunnel token in Cloudflare Zero Trust dashboard
 - Check logs: `docker compose logs cloudflared`
+
+### Migrations never apply on upgrade (missing column / "undefined local variable or method")
+
+**Affected:** installers before **0.4.1** · **Fixed in:** **0.4.1** (installers from 0.4.1 no longer mount `/rails/db`)
+
+**Symptom:** after updating the image, a new migration never runs. For example, the dashboard
+raises `undefined local variable or method 'location'` (or similar), `ls /rails/db/migrate`
+inside the container is missing files that exist in the image, and `db:migrate` reports nothing
+pending.
+
+**Root cause — volume shadowing:** installers before 0.4.1 mounted a named volume
+(`up-timer-db`) over `/rails/db`. Docker seeds a new volume with the image's directory contents
+**once**, at first mount. That volume then persists across upgrades and hides `db/` from the
+container — new migration files are invisible to `db:prepare`/`db:migrate`, so migrations never
+run. The files are in the image; the container just can't see them.
+
+**Diagnose** (compare image vs container):
+
+```bash
+# File present in the image…
+docker run --rm binilsn/up-timer:latest ls /rails/db/migrate | grep <migration>
+
+# …but missing inside the running container
+# (this mismatch is the signature of volume shadowing)
+docker compose -f docker-compose.generated.yml exec up-timer ls /rails/db/migrate | grep <migration>
+
+# Confirm the shadowing mount exists
+docker inspect up-timer --format '{{json .Mounts}}'
+```
+
+**Fix:**
+
+```bash
+# 1. Remove the shadowing volume mount from the generated compose
+sed -i '/up-timer-db:\/rails\/db/d' docker-compose.generated.yml
+
+# 2. Recreate the container so /rails/db comes from the image
+#    (add -f deploy/docker-compose.pg.yml when using PostgreSQL)
+docker compose -f docker-compose.generated.yml -f deploy/docker-compose.pg.yml \
+  --env-file deploy/.env up -d --force-recreate
+
+# 3. Run pending migrations (the entrypoint's db:prepare does this on boot too)
+docker compose -f docker-compose.generated.yml -f deploy/docker-compose.pg.yml \
+  --env-file deploy/.env exec up-timer bin/rails db:migrate
+
+# 4. Delete the stale volume — safe, it only holds old db/ files.
+#    Your data lives in the storage and pgdata volumes, which are untouched.
+docker volume rm up-timer-db
+```
+
+**Prevention:** never mount a volume over code paths (`/rails/db`, `/rails/app`, …). Volumes are
+for runtime data (Postgres data, uploads) only. Installers from 0.4.1 onward no longer mount
+`/rails/db`, so deployments created or regenerated with them are unaffected.

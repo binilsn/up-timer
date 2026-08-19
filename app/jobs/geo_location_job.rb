@@ -8,10 +8,10 @@ class GeoLocationJob < ApplicationJob
 
     result = GeoLocationService.call(monitor.url)
 
-    if result.success
-      monitor.update_columns(latitude: result.latitude, longitude: result.longitude)
+    if result[:success]
+      monitor.update_columns(location: result)
     else
-      monitor.update_columns(latitude: nil, longitude: nil)
+      monitor.update_columns(location: nil)
     end
   end
 end

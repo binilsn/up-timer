@@ -43,7 +43,7 @@
     </div>
     <div class="card">
       <p class="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400 font-mono">Check Interval</p>
-      <p class="text-lg font-semibold text-navy mt-1"><%= @node.check_interval %>s</p>
+      <p class="text-lg font-semibold text-navy mt-1"><%= @node.check_interval_display %></p>
     </div>
     <div class="card">
       <p class="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400 font-mono">Timeout</p>
@@ -66,6 +66,20 @@
     <div class="card">
       <p class="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400 font-mono">Failure Threshold</p>
       <p class="text-lg font-semibold text-navy mt-1"><%= @node.down_threshold %></p>
+    </div>
+    <div class="card">
+      <p class="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400 font-mono">Location</p>
+      <% if @node.location_summary %>
+        <p class="text-sm font-semibold text-navy mt-1"><%= @node.location_summary %></p>
+        <% if @node.location["latitude"] && @node.location["longitude"] %>
+          <p class="text-[10px] font-mono text-slate-400 mt-0.5"><%= @node.location["latitude"].round(4) %>, <%= @node.location["longitude"].round(4) %></p>
+        <% end %>
+        <% if @node.location["region"].present? || @node.location["country"].present? %>
+          <p class="text-[10px] font-mono text-slate-400"><%= [@node.location["region"], @node.location["country"]].compact.join(", ") %></p>
+        <% end %>
+      <% else %>
+        <p class="text-xs text-slate-400 font-mono mt-1">—</p>
+      <% end %>
     </div>
     <% if current_account&.admin? %>
     <div class="card">
