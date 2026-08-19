@@ -1,6 +1,6 @@
 // Cache static assets for offline access.
 const CACHE_NAME = "uptimer-v1";
-const ASSETS = ["/", "/icon.png", "/icon.svg"];
+const ASSETS = ["/", "/icon.png", "/maskable-icon.png"];
 
 self.addEventListener("install", (event) => {
     event.waitUntil(
