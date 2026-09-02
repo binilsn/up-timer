@@ -369,7 +369,7 @@ These run automatically in CI on every pull request.
 | Icons         | Lucide                                                 |
 | Tools         | Tippy.js (tooltips), Pagy (pagination)                 |
 | Deployment    | Docker, Kamal, Docker Compose                          |
-| CI            | GitHub Actions (scan, lint, test, deploy_test)         |
+| CI            | GitHub Actions (scan, lint, test, deploy_test, PR review) |
 
 ## Creating a Release
 
