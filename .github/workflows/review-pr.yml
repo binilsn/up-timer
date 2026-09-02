@@ -24,7 +24,8 @@ jobs:
           node-version: "24"
 
       - name: Install up-reviewer
-        run: npm install up-reviewer
+        # Pin to exact version to prevent supply-chain attacks. Update manually.
+        run: npm install up-reviewer@0.3.1
 
       - name: Review PR
         run: npx review
@@ -35,4 +36,3 @@ jobs:
           AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
           AGENT_MODEL: ${{ secrets.AGENT_MODEL }}
           AGENT_PROVIDER_BASE_URL: ${{ secrets.AGENT_PROVIDER_BASE_URL }}
-          
